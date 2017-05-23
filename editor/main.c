@@ -11,7 +11,27 @@ enum
 
 #include <gtk/gtk.h>
 #include <sqlite3.h>
+#include <string.h>
+#include <stdlib.h>
 #define DB_FILENAME "auction.sqlite"
+
+GtkWidget * view;
+GtkWidget * win;
+
+GtkWidget * author_box;
+GtkWidget * title_box;
+GtkTextBuffer * info_buffer;
+GtkWidget * info_box;
+GtkWidget * start_bid_box;
+GtkWidget * picture;
+
+GtkWidget * new_btn;
+GtkWidget * commit_btn;
+GtkWidget * load_picture_btn;
+GtkCellRenderer * renderer;
+GtkTreeViewColumn * column;
+GtkTreeSelection *selection;
+GtkListStore * items_store;
 
 int fill_items_store(GtkListStore * store){
 	int rc;
@@ -94,34 +114,71 @@ int fill_items_store(GtkListStore * store){
 	
 	return 0;
 }
-	void tree_selection_changed_cb(GtkTreeSelection *selection, gpointer data){
-		GtkTreeIter iter;
-		GtkTreeModel *model;
-		if (gtk_tree_selection_get_selected (selection, &model,&iter))
-		{
-			gchar * item;
-			gtk_tree_model_get (model, &iter, 
-					TITLE_COLUMN, &item, -1);
-		}
+
+int compare_treeview_editor(){
+	GtkTreeIter iter;
+	GtkTreeModel *model;
+	if (gtk_tree_selection_get_selected (selection, &model,&iter))
+	{
+		gchar * title;
+		gchar * author;
+		gchar * info;
+		int start_bid;
+		int result;
+		GValue val = G_VALUE_INIT;
+		
+		g_value_init (&val, G_TYPE_UINT);
+		g_object_get_property(G_OBJECT(info_buffer),"text",&val);
+
+		gtk_tree_model_get (model, &iter, 
+			TITLE_COLUMN, &title,
+		       	AUTHOR_COLUMN, &author,
+		        ITEM_INFO_COLUMN, &info,
+			START_BID_COLUMN, &start_bid,	-1);
+	result = strcmp (gtk_entry_get_text(GTK_ENTRY(author_box)),author)==0 &&
+		 strcmp (gtk_entry_get_text(GTK_ENTRY(title_box)),title)==0 &&
+		 strcmp (g_value_get_string(&val), info)==0 &&
+		 atoi(gtk_entry_get_text(GTK_ENTRY(start_bid_box))) == start_bid;
+	g_free(title);
+	g_free(author);
+	g_free(info);
+	return result;
+//info_buffer;
+//start_bid_box;
+//GtkWidget * picture;
+
+
+	}else return 0;
+}
+
+void tree_selection_changed_cb(GtkTreeSelection *selection, gpointer data){
+	GtkTreeIter iter;
+	GtkTreeModel *model;
+	if (gtk_tree_selection_get_selected (selection, &model,&iter))
+	{
+		gchar * item;
+		gtk_tree_model_get (model, &iter, 
+			TITLE_COLUMN, &item, -1);
 	}
+}
+
+
+
+int commit_line(GtkButton* btn, gpointer user_data){
+
+}
+
+int load_image(GtkButton* btn, gpointer user_data){
+
+}
+
+int add_new_item(GtkButton* btn, gpointer user_data){
+
+}
+
 
 int activate(GtkApplication* app,
 	       gpointer user_data){
-	GtkWidget * view;
-	GtkWindow * win;
-	GtkWidget * author_box;
-	GtkWidget * title_box;
-	GtkTextBuffer * info_buffer;
-	GtkWidget * info_box;
-
-	GtkWidget * start_bid_box;
-	GtkWidget * picture;
-	GtkWidget * commit_btn;
-	GtkWidget * load_picture_btn;
-	GtkCellRenderer * renderer;
-	GtkTreeViewColumn * column;
-	GtkTreeSelection *select;
-	GtkListStore * items_store;
 	items_store=
 	       gtk_list_store_new (N_COLUMNS, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING,
 			           G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT);
@@ -136,9 +193,9 @@ int activate(GtkApplication* app,
 							 NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW (view),column);
 
-	select = gtk_tree_view_get_selection (GTK_TREE_VIEW (view));
-	gtk_tree_selection_set_mode (select, GTK_SELECTION_SINGLE);
-	g_signal_connect (G_OBJECT (select), "changed",
+	selection = gtk_tree_view_get_selection (GTK_TREE_VIEW (view));
+	gtk_tree_selection_set_mode (selection, GTK_SELECTION_SINGLE);
+	g_signal_connect (G_OBJECT (selection), "changed",
                   G_CALLBACK (tree_selection_changed_cb),
                   NULL);
 
@@ -169,10 +226,16 @@ int activate(GtkApplication* app,
 
 	gtk_box_pack_start (GTK_BOX(box2), picture, TRUE,FALSE,0);
 
+	new_btn =  gtk_button_new_with_label("New Item");
 	commit_btn =  gtk_button_new_with_label("Commit");
 	load_picture_btn = gtk_button_new_with_label("Load Picture");
 
 	GtkWidget * box4 = gtk_box_new(GTK_ORIENTATION_VERTICAL, 1);
+
+	gtk_box_pack_start( GTK_BOX(box4), new_btn, FALSE,FALSE,0);
+	g_signal_connect (new_btn, "clicked", G_CALLBACK (add_new_item), NULL);
+	g_signal_connect (commit_btn, "clicked", G_CALLBACK (commit_line), NULL);
+	g_signal_connect (load_picture_btn, "clicked", G_CALLBACK (load_image), NULL);
 
 	gtk_box_pack_start( GTK_BOX(box4), commit_btn, FALSE,FALSE,0);
 	gtk_box_pack_start( GTK_BOX(box4), load_picture_btn, FALSE,FALSE,0);
@@ -182,7 +245,7 @@ int activate(GtkApplication* app,
 	info_buffer = gtk_text_buffer_new(NULL);
 	info_box = gtk_text_view_new_with_buffer(info_buffer);
 
-	gtk_box_pack_start( GTK_BOX(box), info_box,FALSE,FALSE,0);
+	gtk_box_pack_start( GTK_BOX(box), info_box,TRUE,TRUE,0);
 
 
 
