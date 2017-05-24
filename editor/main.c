@@ -1,19 +1,11 @@
-enum
-{
-   ITEM_ID_COLUMN,
-   TITLE_COLUMN,
-   AUTHOR_COLUMN,
-   ITEM_PICTURE_COLUMN,
-   ITEM_INFO_COLUMN,
-   START_BID_COLUMN,
-   N_COLUMNS
-};
 
 #include <gtk/gtk.h>
 #include <sqlite3.h>
 #include <string.h>
 #include <stdlib.h>
-#define DB_FILENAME "auction.sqlite"
+#include "../common/config.h"
+#include "../common/database.h"
+
 
 GtkWidget * view;
 GtkWidget * win;
@@ -33,87 +25,6 @@ GtkTreeViewColumn * column;
 GtkTreeSelection *selection;
 GtkListStore * items_store;
 
-int fill_items_store(GtkListStore * store){
-	int rc;
-	sqlite3 * database;
-	sqlite3_stmt * statement;
-	GtkTreeIter iter;
-
-	rc = sqlite3_open(DB_FILENAME ,&database);
-	if(rc != SQLITE_OK)
-	{
-		puts(sqlite3_errmsg(database));
-		goto cleanup_1;
-	}
-	
-	char create_table [] = "CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY ON CONFLICT REPLACE AUTOINCREMENT, title, author, info, start_bid, picture);";
-	
-	rc = sqlite3_prepare_v2(database, create_table,-1 /*sizeof(create_table)*/,&statement,NULL);
-	if(rc != SQLITE_OK){
-		puts("sqlite prepare not ok");
-		puts(sqlite3_errmsg(database));
-		goto cleanup_2;
-	}
-
-	rc = sqlite3_step(statement);
-	if(rc != SQLITE_DONE){
-	    puts("sqlite step not ok");
-	    puts(sqlite3_errmsg(database));
-	    goto cleanup_2;
-	}
-	sqlite3_finalize(statement);
-
-	char query[] = "SELECT * FROM items;";
-	rc = sqlite3_prepare_v2(database,query, sizeof(query), &statement, NULL);
-	if(rc != SQLITE_OK) {
-		puts ("sqlite prepare select not ok");
-		puts (sqlite3_errmsg(database));
-		goto cleanup_2;
-	}
-
-	rc = sqlite3_step(statement);
-	while(rc==SQLITE_ROW){
-		GValue id = G_VALUE_INIT;
-		GValue title = G_VALUE_INIT;
-		GValue author = G_VALUE_INIT;
-		GValue info = G_VALUE_INIT;
-		GValue start_bid = G_VALUE_INIT;
-		GValue picture = G_VALUE_INIT;
-		g_value_set_int   ( &id,      sqlite3_column_int(statement,  0));
-		g_value_set_string( &title,   sqlite3_column_text(statement, 1));
-		g_value_set_string( &author,  sqlite3_column_text(statement, 2));
-		g_value_set_string( &info,    sqlite3_column_text(statement, 3));
-		g_value_set_int   ( &start_bid,sqlite3_column_int(statement,  4));
-		g_value_set_string( &picture, sqlite3_column_text(statement, 5));
-
-		gtk_list_store_append(store, &iter);		
-		gtk_list_store_set_value(store,&iter,ITEM_ID_COLUMN,   &id  );
-		gtk_list_store_set_value(store,&iter,TITLE_COLUMN,     &title );
-		gtk_list_store_set_value(store,&iter,AUTHOR_COLUMN,    &author );
-		gtk_list_store_set_value(store,&iter,ITEM_INFO_COLUMN, &info );
-		gtk_list_store_set_value(store,&iter,START_BID_COLUMN, &start_bid);
-		gtk_list_store_set_value(store,&iter,ITEM_PICTURE_COLUMN,&picture);
-
-		rc = sqlite3_step(statement);
-	}
-
-	if(rc != SQLITE_DONE){
-	    puts(sqlite3_errmsg(database));
-	    goto cleanup_2;
-	}
-
-
-    cleanup_2:
-        sqlite3_finalize(statement);
-
-    cleanup_1:
-    	sqlite3_close(database);
-		gtk_list_store_append(store, &iter);		
-	
-	printf("%X\n",store);
-	
-	return 0;
-}
 
 int compare_treeview_editor(){
 	GtkTreeIter iter;
