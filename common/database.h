@@ -156,8 +156,6 @@ struct item get_item(int id){
 		ret.start_bid  = ( sqlite3_column_int(statement,  4));
 		blob = sqlite3_column_blob(statement, 5);
 
-
-
 		if(blob){
 			int len = sqlite3_column_bytes(statement, 5);
 			ret.picture = malloc (len);
