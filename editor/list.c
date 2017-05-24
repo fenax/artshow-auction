@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include "../common/config.h"
 #include "../common/database.h"
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 
 GtkWidget * view;
@@ -32,13 +35,56 @@ void tree_selection_changed_cb(GtkTreeSelection *selection, gpointer data){
 }
 
 
-int add_new_item(GtkButton* btn, gpointer user_data){
+void open_editor(int id){
+	char tmp[256];
+	char t[256];
 
+	getcwd(t,sizeof(t));
+	t[sizeof(t)-1]='\0';
+	puts(t);
+//	if(id == -1){
+		snprintf(tmp, sizeof(tmp), "%s/edit.out",t);
+//	}else{
+//		snprintf(tmp, sizeof(tmp), "%s/edit.out %d",
+//				t, id);
+//	}
+	tmp[sizeof(tmp)-1]='\0';
+	snprintf(t, sizeof(t),"%d",id);
+	printf("running %s \n",tmp);
+	int pid = fork();
+	if(pid){
+		puts("parent");
+		int status;
+		waitpid (pid, &status, 0);
+	}else{
+		puts("child");
+		execl(tmp,tmp,t,(char  *) NULL);
+		perror("lol tout est cassé");
+		_exit (EXIT_FAILURE);
+	}
+}
+
+int add_new_item(GtkButton* btn, gpointer user_data){
+	open_editor(-1);
 }
 
 int edit_item(GtkButton* btn, gpointer user_data){
+	GtkTreeIter iter;
+	GtkTreeModel *model;
 	
+	if (gtk_tree_selection_get_selected (selection, &model,&iter))
+	{
+		int item;
+		
+		gtk_tree_model_get (model, &iter, 
+			ITEM_ID_COLUMN, &item, -1);
+	open_editor(item);
+		
+	}
+
 }
+
+
 
 
 int activate(GtkApplication* app,
